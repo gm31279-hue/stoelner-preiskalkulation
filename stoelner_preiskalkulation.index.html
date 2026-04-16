@@ -1,0 +1,345 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Stölner — Ersatzteil Preiskalkulation</title>
+<style>
+:root {
+  --pk: #E5007D;
+  --pk-l: rgba(229,0,125,0.08);
+  --pk-b: rgba(229,0,125,0.2);
+  --bg: #ffffff;
+  --bg2: #f5f5f5;
+  --text: #1a1a1a;
+  --text2: #666666;
+  --text3: #999999;
+  --border: rgba(0,0,0,0.12);
+  --border2: rgba(0,0,0,0.22);
+  --radius: 8px;
+  --radius-lg: 12px;
+  --mono: 'Courier New', Courier, monospace;
+  --sans: -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: var(--sans); background: #ececec; min-height: 100vh; display: flex; align-items: flex-start; justify-content: center; padding: 2rem 1rem; }
+.card { background: var(--bg); border-radius: var(--radius-lg); box-shadow: 0 2px 16px rgba(0,0,0,0.1); max-width: 780px; width: 100%; padding: 2rem; }
+
+.hdr { display: flex; align-items: center; justify-content: space-between; padding-bottom: 1rem; border-bottom: 2px solid var(--pk); margin-bottom: 1.5rem; }
+.hdr-left { display: flex; align-items: center; gap: 10px; }
+.dot { width: 10px; height: 10px; border-radius: 50%; background: var(--pk); flex-shrink: 0; }
+.title { font-size: 17px; font-weight: 600; color: var(--text); }
+.sub { font-size: 12px; color: var(--text2); margin-top: 2px; }
+.badge-eu { background: var(--pk-l); color: var(--pk); font-size: 11px; padding: 3px 10px; border-radius: 20px; border: 1px solid var(--pk-b); font-weight: 500; }
+
+.tabs { display: flex; border-bottom: 1px solid var(--border); margin-bottom: 1.5rem; }
+.tab { padding: 9px 16px; font-size: 13px; cursor: pointer; color: var(--text2); border-bottom: 2px solid transparent; margin-bottom: -1px; background: none; border-top: none; border-left: none; border-right: none; font-family: var(--sans); }
+.tab.active { color: var(--pk); border-bottom-color: var(--pk); font-weight: 600; }
+.tab:hover:not(.active) { color: var(--text); }
+
+.panel { display: none; }
+.panel.active { display: block; }
+
+.brackets { width: 100%; border-collapse: collapse; font-size: 13px; margin-bottom: 1.5rem; }
+.brackets th { padding: 8px 12px; background: var(--bg2); color: var(--text2); font-weight: 500; font-size: 12px; text-align: left; border-bottom: 1px solid var(--border); }
+.brackets th.r { text-align: right; }
+.brackets td { padding: 10px 12px; border-bottom: 1px solid var(--border); color: var(--text); }
+.brackets td.r { text-align: right; font-family: var(--mono); font-size: 13px; }
+.brackets tr.hl td { background: var(--pk-l); color: var(--pk); font-weight: 600; }
+.arr { display: none; margin-right: 5px; }
+.brackets tr.hl .arr { display: inline; }
+
+.rate-note { font-size: 11px; color: var(--text2); margin-bottom: 1.5rem; padding: 7px 12px; background: var(--bg2); border-radius: var(--radius); border-left: 3px solid var(--pk); }
+
+.grid4 { display: grid; grid-template-columns: 1fr 1fr 1fr 1fr; gap: 12px; margin-bottom: 1.5rem; }
+@media (max-width: 600px) { .grid4 { grid-template-columns: 1fr 1fr; } }
+@media (max-width: 400px) { .grid4 { grid-template-columns: 1fr; } }
+
+.field label { display: block; font-size: 12px; color: var(--text2); margin-bottom: 5px; font-weight: 500; }
+.field input { width: 100%; padding: 9px 11px; border: 1px solid var(--border2); border-radius: var(--radius); font-size: 14px; font-family: var(--sans); color: var(--text); background: var(--bg); outline: none; }
+.field input:focus { border-color: var(--pk); box-shadow: 0 0 0 2px var(--pk-l); }
+.field input.ats { font-family: var(--mono); background: var(--bg2); }
+.field input.eur-auto { font-family: var(--mono); background: var(--pk-l); border-color: var(--pk-b); color: var(--pk); }
+.field .unit { font-size: 11px; color: var(--text3); margin-top: 4px; }
+
+.vk-card { background: var(--bg2); border-radius: var(--radius); border: 1px solid var(--border); padding: 10px 14px; height: 100%; }
+.vk-card .lbl { font-size: 12px; color: var(--text2); font-weight: 500; }
+.vk-card .val { font-size: 24px; font-weight: 700; color: var(--pk); font-family: var(--mono); margin-top: 3px; }
+.vk-card .meta { font-size: 11px; color: var(--text3); margin-top: 4px; }
+
+.hint { font-size: 12px; color: var(--text3); margin-bottom: 10px; line-height: 1.7; }
+textarea { width: 100%; height: 120px; font-family: var(--mono); font-size: 12px; resize: vertical; padding: 10px; border: 1px solid var(--border2); border-radius: var(--radius); outline: none; color: var(--text); background: var(--bg); }
+textarea:focus { border-color: var(--pk); box-shadow: 0 0 0 2px var(--pk-l); }
+
+.btns { display: flex; gap: 8px; flex-wrap: wrap; margin: 10px 0; }
+.btn-pk { background: var(--pk); color: #fff; border: none; padding: 9px 20px; border-radius: var(--radius); font-size: 13px; cursor: pointer; font-family: var(--sans); font-weight: 500; }
+.btn-pk:hover { opacity: 0.88; }
+.btn-sec { background: transparent; color: var(--text2); border: 1px solid var(--border2); padding: 9px 20px; border-radius: var(--radius); font-size: 13px; cursor: pointer; font-family: var(--sans); }
+.btn-sec:hover { background: var(--bg2); }
+
+.res-table { width: 100%; border-collapse: collapse; font-size: 13px; margin-top: 12px; }
+.res-table th { padding: 8px 12px; background: var(--bg2); color: var(--text2); font-weight: 500; font-size: 12px; text-align: left; border-bottom: 1px solid var(--border); }
+.res-table th.r, .res-table td.r { text-align: right; }
+.res-table td { padding: 9px 12px; border-bottom: 1px solid var(--border); font-family: var(--mono); font-size: 12px; color: var(--text); }
+.res-table td.vk-val { color: var(--pk); font-weight: 700; }
+.res-table tr.err td { color: #cc0000; }
+
+.status { font-size: 12px; color: var(--text2); padding: 8px 12px; background: var(--bg2); border-radius: var(--radius); margin-top: 10px; }
+.status.ok { color: var(--pk); font-weight: 500; }
+
+.cfg-table { width: 100%; border-collapse: collapse; font-size: 13px; margin-bottom: 1rem; }
+.cfg-table th { padding: 8px 12px; background: var(--bg2); color: var(--text2); font-weight: 500; font-size: 12px; text-align: left; border-bottom: 1px solid var(--border); }
+.cfg-table td { padding: 7px 12px; border-bottom: 1px solid var(--border); }
+.cfg-table input[type=number] { width: 100px; padding: 6px 8px; border: 1px solid var(--border2); border-radius: var(--radius); font-family: var(--mono); font-size: 13px; outline: none; }
+.cfg-table input[type=number]:focus { border-color: var(--pk); }
+
+.wl-box { border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 1rem 1.25rem; background: var(--bg2); margin-bottom: 1rem; }
+.wl-box h3 { font-size: 13px; font-weight: 600; margin-bottom: 8px; color: var(--text); }
+.wl-box p, .wl-box li { font-size: 12px; color: var(--text2); line-height: 1.7; }
+.wl-box ul { margin-left: 1.2rem; margin-top: 4px; }
+.wl-box code { font-family: var(--mono); font-size: 11px; background: var(--bg); padding: 1px 5px; border-radius: 3px; border: 1px solid var(--border); }
+
+.footer { margin-top: 2rem; padding-top: 1rem; border-top: 1px solid var(--border); font-size: 11px; color: var(--text3); text-align: center; }
+</style>
+</head>
+<body>
+<div class="card">
+
+  <div class="hdr">
+    <div class="hdr-left">
+      <div class="dot"></div>
+      <div>
+        <div class="title">Stölner — Ersatzteil Preiskalkulation</div>
+        <div class="sub">EU Preisliste</div>
+      </div>
+    </div>
+    <span class="badge-eu">EU Probe</span>
+  </div>
+
+  <div class="tabs">
+    <button class="tab active" onclick="switchTab('einzel')">Einzelkalkulation</button>
+    <button class="tab" onclick="switchTab('stapel')">Stapelkalkulation</button>
+    <button class="tab" onclick="switchTab('config')">Preistabelle</button>
+    <button class="tab" onclick="switchTab('winline')">WinLine-Export</button>
+  </div>
+
+  <!-- EINZELKALKULATION -->
+  <div id="t-einzel" class="panel active">
+    <table class="brackets">
+      <thead><tr><th>EK-Bereich</th><th class="r">Faktor</th></tr></thead>
+      <tbody id="bracket-body"></tbody>
+    </table>
+
+    <div class="rate-note">Fixkurs: 1 € = 13,7603 ATS (offizieller EU-Umrechnungskurs)</div>
+
+    <div class="grid4">
+      <div class="field">
+        <label>Artikelnummer</label>
+        <input type="text" id="art-nr" placeholder="z.B. 10-00123" autocomplete="off">
+      </div>
+      <div class="field">
+        <label>EK in Schilling (ATS)</label>
+        <input type="text" id="ats-in" class="ats" placeholder="0,0000" oninput="fromATS()" autocomplete="off">
+        <div class="unit">ATS → wird automatisch in € umgerechnet</div>
+      </div>
+      <div class="field">
+        <label>EK in Euro (€)</label>
+        <input type="text" id="ek-in" class="eur-auto" placeholder="0,0000" oninput="fromEUR()" autocomplete="off">
+        <div class="unit">Oder direkt in € eingeben</div>
+      </div>
+      <div>
+        <div class="vk-card">
+          <div class="lbl">Verkaufspreis (VK)</div>
+          <div class="val" id="vk-out">—</div>
+          <div class="meta" id="vk-meta"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- STAPELKALKULATION -->
+  <div id="t-stapel" class="panel">
+    <p class="hint">
+      Einen Wert pro Zeile. Optional mit Artikelnummer: <code>ART-001;0,0727</code><br>
+      Schilling-Beträge mit Kürzel ATS: <code>ART-002;13,76;ATS</code>
+    </p>
+    <textarea id="batch-in" placeholder="0,0727&#10;1,50&#10;ART-001;45,60&#10;ART-002;13,76;ATS"></textarea>
+    <div class="btns">
+      <button class="btn-pk" onclick="doBatch()">Berechnen</button>
+      <button class="btn-sec" onclick="clearBatch()">Leeren</button>
+    </div>
+    <div id="batch-out"></div>
+  </div>
+
+  <!-- PREISTABELLE -->
+  <div id="t-config" class="panel">
+    <p class="hint" style="margin-bottom:1rem">EK-Grenzen und Faktoren direkt anpassen. Wirkt sofort auf alle Kalkulationen.</p>
+    <table class="cfg-table">
+      <thead><tr><th>Von</th><th>Bis</th><th>Faktor</th></tr></thead>
+      <tbody id="cfg-body"></tbody>
+    </table>
+    <div class="btns"><button class="btn-sec" onclick="resetBrackets()">Zurücksetzen</button></div>
+    <div id="cfg-status"></div>
+  </div>
+
+  <!-- WINLINE -->
+  <div id="t-winline" class="panel">
+    <div class="wl-box">
+      <h3>WinLine CSV-Import (Mesonic)</h3>
+      <p>Export-Format direkt kompatibel mit dem WinLine-Artikelimport.</p>
+      <ul>
+        <li><code>ArtNr</code> — Artikelnummer</li>
+        <li><code>EK_ATS</code> — Einkaufspreis in Schilling</li>
+        <li><code>EK_EUR</code> — Einkaufspreis in Euro</li>
+        <li><code>VK_EUR</code> — berechneter Verkaufspreis</li>
+      </ul>
+    </div>
+    <div class="wl-box">
+      <h3>Import-Pfad in WinLine</h3>
+      <p>Stammdaten → Artikel → Datenaustausch → Import<br>Trennzeichen: Semikolon · Encoding: UTF-8 · Erste Zeile = Kopfzeile</p>
+    </div>
+    <div class="btns" style="margin-top:1rem">
+      <button class="btn-pk" onclick="exportWL()">Als WinLine-CSV exportieren</button>
+      <button class="btn-sec" onclick="exportRaw()">Rohdaten CSV</button>
+    </div>
+    <div id="wl-status"></div>
+  </div>
+
+  <div class="footer">Stölner GmbH &nbsp;·&nbsp; Ersatzteil Preiskalkulation &nbsp;·&nbsp; EU Preisliste</div>
+</div>
+
+<script>
+const ATS_RATE = 13.7603;
+const DEFAULT_BRACKETS = [
+  {min:0,    max:100,   factor:6},
+  {min:100,  max:300,   factor:4.4},
+  {min:300,  max:500,   factor:3.3},
+  {min:500,  max:1000,  factor:2.75},
+  {min:1000, max:10000, factor:2.09},
+];
+let brackets = JSON.parse(JSON.stringify(DEFAULT_BRACKETS));
+let lastBatchData = [];
+
+function parseNum(s) {
+  if (!s || !s.trim()) return NaN;
+  let v = s.trim().replace(/\s/g, '');
+  if (v.includes(',') && v.includes('.')) {
+    v = v.lastIndexOf(',') > v.lastIndexOf('.') ? v.replace(/\./g,'').replace(',','.') : v.replace(/,/g,'');
+  } else { v = v.replace(',', '.'); }
+  return parseFloat(v);
+}
+function fmt(n, dec=4) {
+  if (isNaN(n)) return '—';
+  return n.toLocaleString('de-AT', {minimumFractionDigits: dec, maximumFractionDigits: dec});
+}
+function getBracket(ek) {
+  for (let i = 0; i < brackets.length; i++) if (ek <= brackets[i].max) return i;
+  return brackets.length - 1;
+}
+function calcVK(ek) {
+  const idx = getBracket(ek);
+  return {vk: ek * (brackets[idx].factor + 1), factor: brackets[idx].factor, idx};
+}
+
+function fromATS() {
+  const ats = parseNum(document.getElementById('ats-in').value);
+  const eur = isNaN(ats) ? NaN : ats / ATS_RATE;
+  document.getElementById('ek-in').value = isNaN(eur) ? '' : fmt(eur);
+  updateVK(eur);
+}
+function fromEUR() {
+  document.getElementById('ats-in').value = '';
+  updateVK(parseNum(document.getElementById('ek-in').value));
+}
+function updateVK(ek) {
+  const vkOut = document.getElementById('vk-out');
+  const vkMeta = document.getElementById('vk-meta');
+  if (isNaN(ek)) { vkOut.textContent = '—'; vkMeta.textContent = ''; renderBrackets(-1); return; }
+  const r = calcVK(ek);
+  vkOut.textContent = fmt(r.vk);
+  vkMeta.textContent = `EK ${fmt(ek)} € · Faktor ${r.factor.toLocaleString('de-AT',{minimumFractionDigits:2})}`;
+  renderBrackets(r.idx);
+}
+
+function renderBrackets(activeIdx=-1) {
+  document.getElementById('bracket-body').innerHTML = brackets.map((b, i) => {
+    const hl = i === activeIdx ? 'class="hl"' : '';
+    const range = i === 0 ? 'bis ' + b.max.toLocaleString('de-AT') : 'ab ' + b.min.toLocaleString('de-AT') + ' bis ' + b.max.toLocaleString('de-AT');
+    return `<tr ${hl}><td><span class="arr">▶</span>${range}</td><td class="r">${b.factor.toLocaleString('de-AT',{minimumFractionDigits:2,maximumFractionDigits:2})}</td></tr>`;
+  }).join('');
+}
+function renderConfig() {
+  document.getElementById('cfg-body').innerHTML = brackets.map((b, i) => `
+    <tr>
+      <td><input type="number" value="${b.min}" min="0" step="1" oninput="updateBracket(${i},'min',this.value)"></td>
+      <td><input type="number" value="${b.max}" min="1" step="1" oninput="updateBracket(${i},'max',this.value)"></td>
+      <td><input type="number" value="${b.factor}" min="0.1" step="0.01" oninput="updateBracket(${i},'factor',this.value)"></td>
+    </tr>`).join('');
+}
+function updateBracket(i, f, v) {
+  brackets[i][f] = parseFloat(v) || 0;
+  renderBrackets(); renderConfig();
+  document.getElementById('cfg-status').innerHTML = '<div class="status ok">Aktualisiert</div>';
+  setTimeout(() => { document.getElementById('cfg-status').innerHTML = ''; }, 1800);
+}
+function resetBrackets() {
+  brackets = JSON.parse(JSON.stringify(DEFAULT_BRACKETS));
+  renderBrackets(); renderConfig();
+}
+
+function doBatch() {
+  const lines = document.getElementById('batch-in').value.split('\n').filter(l => l.trim());
+  if (!lines.length) { document.getElementById('batch-out').innerHTML = '<div class="status">Keine Daten.</div>'; return; }
+  lastBatchData = lines.map(l => {
+    const p = l.trim().split(';');
+    let artNr = '—', ekRaw, isATS = false;
+    if (p.length >= 3) { artNr = p[0].trim(); ekRaw = p[1]; isATS = p[2].trim().toUpperCase() === 'ATS'; }
+    else if (p.length === 2) { artNr = p[0].trim(); ekRaw = p[1]; }
+    else { ekRaw = p[0]; }
+    const ekParsed = parseNum(ekRaw);
+    if (isNaN(ekParsed)) return {artNr, ats: NaN, ek: NaN, vk: NaN, err: true};
+    const ek = isATS ? ekParsed / ATS_RATE : ekParsed;
+    const ats = isATS ? ekParsed : ekParsed * ATS_RATE;
+    const r = calcVK(ek);
+    return {artNr, ats, ek, vk: r.vk, err: false};
+  });
+  const rows = lastBatchData.map(d => d.err
+    ? `<tr style="color:#cc0000"><td>${d.artNr}</td><td colspan="3">Ungültig</td></tr>`
+    : `<tr><td>${d.artNr}</td><td style="text-align:right;font-family:monospace">${fmt(d.ats)}</td><td style="text-align:right;font-family:monospace">${fmt(d.ek)}</td><td style="text-align:right;font-family:monospace;color:var(--pk);font-weight:700">${fmt(d.vk)}</td></tr>`
+  ).join('');
+  document.getElementById('batch-out').innerHTML = `
+    <table class="res-table">
+      <thead><tr><th>Art.-Nr.</th><th style="text-align:right">EK (ATS)</th><th style="text-align:right">EK (€)</th><th style="text-align:right">VK (€)</th></tr></thead>
+      <tbody>${rows}</tbody>
+    </table>
+    <div class="status ok">${lastBatchData.length} Artikel berechnet</div>`;
+}
+function clearBatch() { document.getElementById('batch-in').value = ''; document.getElementById('batch-out').innerHTML = ''; lastBatchData = []; }
+
+function dlCSV(content, name) {
+  const blob = new Blob(['\uFEFF' + content], {type: 'text/csv;charset=utf-8'});
+  const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = name; a.click();
+}
+function exportWL() {
+  if (!lastBatchData.length) { document.getElementById('wl-status').innerHTML = '<div class="status">Zuerst Stapelkalkulation ausführen.</div>'; return; }
+  const rows = lastBatchData.filter(d => !d.err).map(d => `${d.artNr};${d.ats.toFixed(4)};${d.ek.toFixed(4)};${d.vk.toFixed(4)}`).join('\r\n');
+  dlCSV('ArtNr;EK_ATS;EK_EUR;VK_EUR\r\n' + rows, 'stoelner_vk_winline.csv');
+  document.getElementById('wl-status').innerHTML = '<div class="status ok">stoelner_vk_winline.csv exportiert</div>';
+}
+function exportRaw() {
+  if (!lastBatchData.length) { document.getElementById('wl-status').innerHTML = '<div class="status">Zuerst Stapelkalkulation ausführen.</div>'; return; }
+  const rows = lastBatchData.filter(d => !d.err).map(d => `${d.artNr},${d.ats.toFixed(4)},${d.ek.toFixed(4)},${d.vk.toFixed(4)}`).join('\r\n');
+  dlCSV('ArtNr,EK_ATS,EK_EUR,VK_EUR\r\n' + rows, 'stoelner_vk_rohdaten.csv');
+}
+
+function switchTab(id) {
+  document.querySelectorAll('.tab').forEach((t, i) => { t.classList.toggle('active', ['einzel','stapel','config','winline'][i] === id); });
+  document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+  document.getElementById('t-' + id).classList.add('active');
+}
+
+renderBrackets();
+renderConfig();
+</script>
+</body>
+</html>
