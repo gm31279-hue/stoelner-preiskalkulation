@@ -1,0 +1,27 @@
+# Render.com Blueprint — One-Click-Deployment der Stölner BSC
+# https://render.com/docs/blueprint-spec
+services:
+  - type: web
+    name: stoelner-bsc
+    runtime: docker
+    repo: https://github.com/gm31279-hue/stoelner-preiskalkulation
+    rootDir: bsc
+    dockerfilePath: ./Dockerfile
+    plan: free
+    region: frankfurt
+    healthCheckPath: /
+    autoDeploy: true
+    envVars:
+      - key: NODE_ENV
+        value: production
+    # Hinweis: Im kostenlosen Plan ist der Speicher flüchtig — bei Neustart/
+    # Deploy gehen die SQLite-Daten verloren. Für dauerhafte Daten einen
+    # bezahlten Plan mit Disk nutzen und BSC_DB auf den Mount-Pfad setzen:
+    #
+    # disk:
+    #   name: bsc-data
+    #   mountPath: /data
+    #   sizeGB: 1
+    # envVars:
+    #   - key: BSC_DB
+    #     value: /data/bsc.db

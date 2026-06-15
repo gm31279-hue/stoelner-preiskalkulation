@@ -48,6 +48,35 @@ sowie Standard-Logins befüllt (in der Konsole ausgegeben):
 > **Wichtig:** Passwörter nach dem ersten Login ändern. Für den Produktivbetrieb
 > hinter HTTPS betreiben (z. B. via Reverse-Proxy) und die Demo-Konten entfernen/ändern.
 
+## Deployment (öffentliche URL)
+
+GitHub Pages kann diese App **nicht** hosten (Pages liefert nur statische Dateien;
+hier läuft ein Node-Server mit Datenbank). Für eine erreichbare Adresse einen
+Node-fähigen Hoster nutzen. Vorbereitet ist ein One-Click-Deployment auf
+**Render.com** (kostenloser Plan):
+
+[![Deploy to Render](https://render.com/images/deploy-to-render-button.svg)](https://render.com/deploy?repo=https://github.com/gm31279-hue/stoelner-preiskalkulation)
+
+Alternativ manuell (z. B. um einen bestimmten Branch zu wählen):
+
+1. Bei [render.com](https://render.com) anmelden (GitHub verbinden).
+2. **New → Blueprint** → dieses Repository wählen → gewünschten Branch.
+   Render liest `render.yaml` und legt den Web-Service automatisch an.
+3. Nach dem Build erscheint die URL, z. B. `https://stoelner-bsc.onrender.com`.
+
+Per Docker (jeder Container-Hoster oder lokal):
+
+```bash
+cd bsc
+docker build -t stoelner-bsc .
+docker run -p 3000:3000 stoelner-bsc      # -> http://localhost:3000
+```
+
+> **Datenpersistenz:** Im kostenlosen Render-Plan ist der Speicher flüchtig — bei
+> Neustart/Deploy gehen die SQLite-Daten verloren. Für den Dauerbetrieb einen Plan
+> mit Disk wählen und `BSC_DB` auf den Mount-Pfad setzen (siehe Kommentar in
+> `render.yaml`).
+
 ## Konfiguration
 
 - `PORT` — Port (Standard `3000`)
