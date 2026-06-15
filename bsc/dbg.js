@@ -1,0 +1,20 @@
+const puppeteer = require('puppeteer-core');
+const { execSync } = require('node:child_process');
+const CHROME = execSync('ls /root/.cache/puppeteer/chrome/*/chrome-linux64/chrome').toString().trim().split('\n')[0];
+const sleep = (ms)=>new Promise(r=>setTimeout(r,ms));
+(async()=>{
+  const b = await puppeteer.launch({executablePath:CHROME,headless:'new',args:['--no-sandbox','--disable-setuid-sandbox','--disable-dev-shm-usage']});
+  const p = await b.newPage();
+  p.on('console', m=>console.log('CONSOLE:', m.type(), m.text()));
+  p.on('pageerror', e=>console.log('PAGEERROR:', e.message));
+  p.on('requestfailed', r=>console.log('REQFAIL:', r.url(), r.failure()?.errorText));
+  await p.goto('http://localhost:3000',{waitUntil:'networkidle0'});
+  await p.type('#login-email','admin@stoelner.at');
+  await p.type('#login-pw','admin123');
+  await p.click('#login-form button[type=submit]');
+  await sleep(2500);
+  console.log('app-view hidden?', await p.$eval('#app-view', el=>el.hidden));
+  console.log('login-err:', await p.$eval('#login-err', el=>el.textContent));
+  console.log('login-view hidden?', await p.$eval('#login-view', el=>el.hidden));
+  await b.close();
+})().catch(e=>{console.error(e);process.exit(1);});
