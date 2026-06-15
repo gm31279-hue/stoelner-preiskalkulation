@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Stölner — Balanced Scorecard</title>
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+<!-- ===================== LOGIN ===================== -->
+<div id="login-view" class="login-wrap" hidden>
+  <form id="login-form" class="login-card">
+    <div class="login-hdr">
+      <div class="dot"></div>
+      <div>
+        <div class="login-title">Stölner BSC</div>
+        <div class="login-sub">Balanced Scorecard · Anmeldung</div>
+      </div>
+    </div>
+    <label>E-Mail
+      <input type="email" id="login-email" autocomplete="username" required placeholder="name@stoelner.at">
+    </label>
+    <label>Passwort
+      <input type="password" id="login-pw" autocomplete="current-password" required placeholder="••••••••">
+    </label>
+    <button type="submit" class="btn btn-pk btn-block">Anmelden</button>
+    <div id="login-err" class="form-err"></div>
+    <div class="login-hint" id="login-demo"></div>
+  </form>
+</div>
+
+<!-- ===================== APP ===================== -->
+<div id="app-view" hidden>
+  <header class="topbar">
+    <div class="brand">
+      <div class="dot"></div>
+      <div>
+        <div class="brand-title">Stölner — Balanced Scorecard</div>
+        <div class="brand-sub" id="live-status">●&nbsp;verbunden</div>
+      </div>
+    </div>
+    <div class="topbar-right">
+      <select id="dept-filter" class="dept-select" title="Abteilung filtern"></select>
+      <div class="usermenu">
+        <button id="user-btn" class="user-btn"></button>
+        <div id="user-dropdown" class="dropdown" hidden>
+          <div class="dropdown-info" id="user-info"></div>
+          <button class="dropdown-item" data-act="password">Passwort ändern</button>
+          <button class="dropdown-item" data-act="logout">Abmelden</button>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <nav class="tabnav">
+    <button class="tab active" data-tab="cockpit">Cockpit</button>
+    <button class="tab" data-tab="massnahmen">Maßnahmen</button>
+    <button class="tab admin-only" data-tab="admin" hidden>Verwaltung</button>
+    <div class="tabnav-spacer"></div>
+    <a class="tab-link" id="export-link" href="/api/export.csv">CSV-Export</a>
+  </nav>
+
+  <main class="content">
+    <section id="tab-cockpit" class="tabpanel active"></section>
+    <section id="tab-massnahmen" class="tabpanel"></section>
+    <section id="tab-admin" class="tabpanel"></section>
+  </main>
+
+  <footer class="appfooter">Stölner GmbH · Balanced Scorecard · abteilungsübergreifend</footer>
+</div>
+
+<!-- ===================== MODAL ===================== -->
+<div id="modal" class="modal-backdrop" hidden>
+  <div class="modal" role="dialog" aria-modal="true">
+    <button class="modal-close" id="modal-close" aria-label="Schließen">×</button>
+    <div id="modal-body"></div>
+  </div>
+</div>
+
+<div id="toast" class="toast" hidden></div>
+
+<script src="app.js"></script>
+</body>
+</html>
