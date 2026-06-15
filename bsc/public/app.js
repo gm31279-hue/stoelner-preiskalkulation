@@ -8,6 +8,7 @@ const State = {
   meta: { departments: [], perspectives: [] },
   dept: 'all',
   tab: 'cockpit',
+  editMode: false,
   scorecard: null,
   initiatives: [],
   es: null,
@@ -184,7 +185,17 @@ function renderCockpit() {
       <p>${State.dept === 'all' ? 'Alle Abteilungen' : esc(State.meta.departments.find(d => d.key === State.dept)?.name || '')} · Stand der Kennzahlen über alle Perspektiven</p>
     </div>
     <div class="statbar">${chips}</div>
-  </div><div class="persp-grid">`;
+  </div>`;
+
+  const canManage = State.user.role === 'admin' || State.user.role === 'lead';
+  if (canManage) {
+    html += `<div class="cockpit-tools">
+      <button id="edit-toggle" class="btn ${State.editMode ? 'btn-pk' : 'btn-sec'} btn-sm">${State.editMode ? '✓ Bearbeitung beenden' : '✎ Struktur bearbeiten'}</button>
+      ${State.editMode ? '<span class="edit-note">Ziele und Kennzahlen können jetzt angelegt, geändert und gelöscht werden.</span>'
+        : '<span class="edit-note">Kennzahl anklicken, um Werte zu erfassen oder den Verlauf zu sehen.</span>'}
+    </div>`;
+  }
+  html += '<div class="persp-grid">';
 
   for (const p of sc.perspectives) {
     html += `<div class="persp"><div class="persp-hdr">
@@ -212,18 +223,24 @@ function renderCockpit() {
           </div>
         </div>`;
       }
-      if (canEdit(obj.department_id) && (State.user.role === 'admin' || State.user.role === 'lead')) {
+      if (State.editMode && canEdit(obj.department_id) && canManage) {
         html += `<button class="btn btn-sec btn-sm" style="margin-top:6px" data-addkpi="${obj.id}" data-dept="${obj.department_id || ''}">+ Kennzahl</button>`;
       }
       html += '</div>';
     }
-    if ((State.user.role === 'admin' || State.user.role === 'lead')) {
+    if (State.editMode && canManage) {
       html += `<button class="btn btn-sec btn-sm" style="margin-top:12px" data-addobj="${p.id}">+ Ziel in ${esc(p.name)}</button>`;
     }
     html += '</div></div>';
   }
   html += '</div>';
   el.innerHTML = html;
+
+  // Bearbeiten-Modus umschalten
+  if ($('#edit-toggle')) $('#edit-toggle').addEventListener('click', () => {
+    State.editMode = !State.editMode;
+    renderCockpit();
+  });
 
   // KPI-Klicks
   $$('.kpi', el).forEach((n) => n.addEventListener('click', () => openKpi(n.dataset.kpi)));
@@ -277,7 +294,7 @@ async function openKpi(id) {
   }
   html += '</tbody></table>';
 
-  if (isLead && canEdit(kpi.department_id)) {
+  if (State.editMode && isLead && canEdit(kpi.department_id)) {
     html += `<div class="form-actions" style="margin-top:16px">
       <button class="btn btn-sec btn-sm" id="edit-kpi">Kennzahl bearbeiten</button>
       <button class="btn btn-danger btn-sm" id="del-kpi">Kennzahl löschen</button></div>`;
