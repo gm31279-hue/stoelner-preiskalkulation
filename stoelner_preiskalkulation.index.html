@@ -130,7 +130,7 @@ textarea:focus { border-color: var(--pk); box-shadow: 0 0 0 2px var(--pk-l); }
       <tbody id="bracket-body"></tbody>
     </table>
 
-    <div class="rate-note">Fixkurs: 1 € = 13,7603 ATS (offizieller EU-Umrechnungskurs)</div>
+    <div class="rate-note">VK = EK × Faktor &nbsp;·&nbsp; Fixkurs: 1 € = 13,7603 ATS (offizieller EU-Umrechnungskurs)</div>
 
     <div class="grid4">
       <div class="field">
@@ -238,7 +238,7 @@ function getBracket(ek) {
 }
 function calcVK(ek) {
   const idx = getBracket(ek);
-  return {vk: ek * (brackets[idx].factor + 1), factor: brackets[idx].factor, idx};
+  return {vk: ek * brackets[idx].factor, factor: brackets[idx].factor, idx};
 }
 
 function fromATS() {
