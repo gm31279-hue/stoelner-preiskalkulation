@@ -112,7 +112,7 @@ textarea:focus { border-color: var(--pk); box-shadow: 0 0 0 2px var(--pk-l); }
       <thead><tr><th>EK-Bereich (€)</th><th class="r">Faktor</th></tr></thead>
       <tbody id="bracket-body"></tbody>
     </table>
-    <div class="rate-note">Fixkurs: 1 € = 13,7603 ATS &nbsp;·&nbsp; Staffelung auf Euro umgerechnet</div>
+    <div class="rate-note">VK = EK × Faktor &nbsp;·&nbsp; Fixkurs: 1 € = 13,7603 ATS &nbsp;·&nbsp; Staffelung auf Euro umgerechnet</div>
     <div class="grid4">
       <div class="field">
         <label>Artikelnummer</label>
@@ -217,7 +217,7 @@ function getBracket(ek) {
 }
 function calcVK(ek) {
   const idx = getBracket(ek);
-  return {vk: ek * (brackets[idx].factor + 1), factor: brackets[idx].factor, idx};
+  return {vk: ek * brackets[idx].factor, factor: brackets[idx].factor, idx};
 }
 function renderBrackets(activeIdx=-1) {
   document.getElementById('bracket-body').innerHTML = brackets.map((b, i) => {
