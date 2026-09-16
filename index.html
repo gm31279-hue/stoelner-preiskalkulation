@@ -112,7 +112,7 @@ textarea:focus { border-color: var(--pk); box-shadow: 0 0 0 2px var(--pk-l); }
       <thead><tr><th>EK-Bereich (€)</th><th class="r">Faktor</th></tr></thead>
       <tbody id="bracket-body"></tbody>
     </table>
-    <div class="rate-note">VK = EK × Faktor &nbsp;·&nbsp; Fixkurs: 1 € = 13,7603 ATS &nbsp;·&nbsp; Staffelung auf Euro umgerechnet</div>
+    <div class="rate-note">VK = EK × Faktor &nbsp;·&nbsp; Fixkurs: 1 € = 13,7603 ATS &nbsp;·&nbsp; <span id="staffel-quelle">Staffel wird aus Siggi geladen …</span></div>
     <div class="grid4">
       <div class="field">
         <label>Artikelnummer</label>
@@ -150,12 +150,12 @@ textarea:focus { border-color: var(--pk); box-shadow: 0 0 0 2px var(--pk-l); }
   </div>
 
   <div id="t-config" class="panel">
-    <p class="hint" style="margin-bottom:1rem">EK-Grenzen und Faktoren direkt anpassen. Wirkt sofort auf alle Kalkulationen.</p>
+    <p class="hint" style="margin-bottom:1rem">Die Staffel wird an einer Stelle gepflegt: in Siggi unter Verwaltung → „Ersatzteil-Staffel“ (nur Admins). Diese Seite und Siggi rechnen beide damit; Änderungen erscheinen hier nach spätestens einer Minute (Seite neu laden).</p>
     <table class="cfg-table">
-      <thead><tr><th>Von (€)</th><th>Bis (€)</th><th>Faktor</th></tr></thead>
+      <thead><tr><th>EK von (€)</th><th>EK bis (€, einschließlich)</th><th>Faktor</th></tr></thead>
       <tbody id="cfg-body"></tbody>
     </table>
-    <div class="btns"><button class="btn-sec" onclick="resetBrackets()">Zurücksetzen</button></div>
+    <div class="btns"><a class="btn-sec" href="https://siggi.stoelner.at/admin#ersatzteil-staffel" target="_blank" rel="noopener" style="text-decoration:none;display:inline-block">Staffel in Siggi bearbeiten ↗</a></div>
     <div id="cfg-status"></div>
   </div>
 
@@ -186,14 +186,16 @@ textarea:focus { border-color: var(--pk); box-shadow: 0 0 0 2px var(--pk-l); }
 
 <script>
 const ATS_RATE = 13.7603;
+// Die Staffel kommt aus Siggi (Verwaltung → „Ersatzteil-Staffel“). DEFAULT_BRACKETS ist nur der Rückfall, wenn Siggi nicht erreichbar ist.
+const STAFFEL_API = 'https://siggi.stoelner.at/api/ersatzteil-staffel';
 const DEFAULT_BRACKETS = [
-  {min:0,      max:7.27,   factor:6},
-  {min:7.27,   max:21.80,  factor:4.4},
-  {min:21.80,  max:36.34,  factor:3.3},
-  {min:36.34,  max:72.68,  factor:2.75},
-  {min:72.68,  max:726.75, factor:2.09},
+  {min:0,      max:7.27,     factor:6},
+  {min:7.27,   max:21.80,    factor:4.4},
+  {min:21.80,  max:36.34,    factor:3.3},
+  {min:36.34,  max:72.68,    factor:2.75},
+  {min:72.68,  max:Infinity, factor:2.09},
 ];
-let brackets = JSON.parse(JSON.stringify(DEFAULT_BRACKETS));
+let brackets = DEFAULT_BRACKETS.map(b => ({...b}));
 let lastBatchData = [];
 
 function parseNum(s) {
@@ -222,29 +224,44 @@ function calcVK(ek) {
 function renderBrackets(activeIdx=-1) {
   document.getElementById('bracket-body').innerHTML = brackets.map((b, i) => {
     const hl = i === activeIdx ? 'class="hl"' : '';
-    const range = i === 0
-      ? 'bis ' + fmtB(b.max) + ' €'
-      : fmtB(b.min) + ' – ' + fmtB(b.max) + ' €';
+    const range = b.max === Infinity
+      ? (i === 0 ? 'alle Preise' : 'über ' + fmtB(b.min) + ' €')
+      : (i === 0 ? 'bis ' + fmtB(b.max) + ' €' : 'über ' + fmtB(b.min) + ' bis ' + fmtB(b.max) + ' €');
     return `<tr ${hl}><td><span class="arr">▶</span>${range}</td><td class="r">${b.factor.toLocaleString('de-AT',{minimumFractionDigits:2,maximumFractionDigits:2})}</td></tr>`;
   }).join('');
 }
 function renderConfig() {
-  document.getElementById('cfg-body').innerHTML = brackets.map((b, i) => `
+  document.getElementById('cfg-body').innerHTML = brackets.map(b => `
     <tr>
-      <td><input type="number" value="${b.min}" min="0" step="0.01" oninput="updateBracket(${i},'min',this.value)"></td>
-      <td><input type="number" value="${b.max}" min="0.01" step="0.01" oninput="updateBracket(${i},'max',this.value)"></td>
-      <td><input type="number" value="${b.factor}" min="0.1" step="0.01" oninput="updateBracket(${i},'factor',this.value)"></td>
+      <td>${fmtB(b.min)}</td>
+      <td>${b.max === Infinity ? 'darüber' : fmtB(b.max)}</td>
+      <td>${b.factor.toLocaleString('de-AT',{minimumFractionDigits:2,maximumFractionDigits:2})}</td>
     </tr>`).join('');
 }
-function updateBracket(i, f, v) {
-  brackets[i][f] = parseFloat(v) || 0;
-  renderBrackets(); renderConfig();
-  document.getElementById('cfg-status').innerHTML = '<div class="status ok">Aktualisiert</div>';
-  setTimeout(() => { document.getElementById('cfg-status').innerHTML = ''; }, 1800);
+function setQuelle(text, ok) {
+  document.getElementById('staffel-quelle').textContent = text;
+  document.getElementById('cfg-status').innerHTML = '<div class="status' + (ok ? ' ok' : '') + '">' + text + '</div>';
 }
-function resetBrackets() {
-  brackets = JSON.parse(JSON.stringify(DEFAULT_BRACKETS));
+async function loadStaffel() {
+  try {
+    const ctl = new AbortController();
+    const t = setTimeout(() => ctl.abort(), 5000);
+    const res = await fetch(STAFFEL_API, {signal: ctl.signal, cache: 'no-store'});
+    clearTimeout(t);
+    const data = await res.json();
+    const stufen = Array.isArray(data.stufen) ? data.stufen : [];
+    if (!res.ok || !stufen.length) throw new Error('keine Staffel');
+    brackets = stufen.map((s, i) => ({min: i === 0 ? 0 : Number(stufen[i-1].bis), max: s.bis == null ? Infinity : Number(s.bis), factor: Number(s.faktor)}));
+    const stand = data.stand ? new Date(data.stand).toLocaleString('de-AT', {dateStyle: 'short', timeStyle: 'short'}) : '';
+    setQuelle('Staffel aus Siggi' + (stand ? ', Stand ' + stand : '') + (data.quelle === 'rueckfall' ? ' (Siggi-Rückfallstand)' : ''), true);
+  } catch (e) {
+    brackets = DEFAULT_BRACKETS.map(b => ({...b}));
+    setQuelle('Siggi nicht erreichbar – gerechnet mit dem eingebauten Stand vom 16.09.2026', false);
+  }
   renderBrackets(); renderConfig();
+  const ek = parseNum(document.getElementById('ek-in').value);
+  if (!isNaN(ek)) updateVK(ek);
+  if (lastBatchData.length) doBatch();
 }
 function fromATS() {
   const ats = parseNum(document.getElementById('ats-in').value);
@@ -315,6 +332,7 @@ function switchTab(id) {
 }
 renderBrackets();
 renderConfig();
+loadStaffel();
 </script>
 </body>
 </html>
