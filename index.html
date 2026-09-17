@@ -109,10 +109,10 @@ textarea:focus { border-color: var(--pk); box-shadow: 0 0 0 2px var(--pk-l); }
 
   <div id="t-einzel" class="panel active">
     <table class="brackets">
-      <thead><tr><th>EK-Bereich (€)</th><th class="r">Faktor</th></tr></thead>
+      <thead><tr><th>EK-Bereich (€)</th><th class="r">Faktor (gleitend)</th></tr></thead>
       <tbody id="bracket-body"></tbody>
     </table>
-    <div class="rate-note">VK = EK × Faktor &nbsp;·&nbsp; Fixkurs: 1 € = 13,7603 ATS &nbsp;·&nbsp; <span id="staffel-quelle">Staffel wird aus Siggi geladen …</span></div>
+    <div class="rate-note">Gleitender Faktor: sinkt innerhalb der Stufe bis zur Obergrenze, über 72,68 € gilt der letzte Faktor nur für den Mehrbetrag &nbsp;·&nbsp; Fixkurs: 1 € = 13,7603 ATS &nbsp;·&nbsp; <span id="staffel-quelle">Staffel wird aus Siggi geladen …</span></div>
     <div class="grid4">
       <div class="field">
         <label>Artikelnummer</label>
@@ -152,7 +152,7 @@ textarea:focus { border-color: var(--pk); box-shadow: 0 0 0 2px var(--pk-l); }
   <div id="t-config" class="panel">
     <p class="hint" style="margin-bottom:1rem">Die Staffel wird an einer Stelle gepflegt: in Siggi unter Verwaltung → „Ersatzteil-Staffel“ (nur Admins). Diese Seite und Siggi rechnen beide damit; Änderungen erscheinen hier nach spätestens einer Minute (Seite neu laden).</p>
     <table class="cfg-table">
-      <thead><tr><th>EK von (€)</th><th>EK bis (€, einschließlich)</th><th>Faktor</th></tr></thead>
+      <thead><tr><th>EK von (€)</th><th>EK bis (€, einschließlich)</th><th>Faktor an der Obergrenze</th><th>Gleit am Stufenanfang</th></tr></thead>
       <tbody id="cfg-body"></tbody>
     </table>
     <div class="btns"><a class="btn-sec" href="https://siggi.stoelner.at/admin#ersatzteil-staffel" target="_blank" rel="noopener" style="text-decoration:none;display:inline-block">Staffel in Siggi bearbeiten ↗</a></div>
@@ -188,12 +188,15 @@ textarea:focus { border-color: var(--pk); box-shadow: 0 0 0 2px var(--pk-l); }
 const ATS_RATE = 13.7603;
 // Die Staffel kommt aus Siggi (Verwaltung → „Ersatzteil-Staffel“). DEFAULT_BRACKETS ist nur der Rückfall, wenn Siggi nicht erreichbar ist.
 const STAFFEL_API = 'https://siggi.stoelner.at/api/ersatzteil-staffel';
+// Gleitende Staffel wie in der Excel-Kalkulation des Kundenservice (17.09.2026):
+//   Stufe mit Grenze: VK = EK × (Faktor + Gleit × (max − EK) / (max − min))
+//   letzte Stufe:     VK = min × Faktor der Stufe davor + Faktor × (EK − min)
 const DEFAULT_BRACKETS = [
-  {min:0,      max:7.27,     factor:6},
-  {min:7.27,   max:21.80,    factor:4.4},
-  {min:21.80,  max:36.34,    factor:3.3},
-  {min:36.34,  max:72.68,    factor:2.75},
-  {min:72.68,  max:Infinity, factor:2.09},
+  {min:0,      max:7.27,     factor:6,    gleit:1},
+  {min:7.27,   max:21.80,    factor:4.4,  gleit:1},
+  {min:21.80,  max:36.34,    factor:3.3,  gleit:1},
+  {min:36.34,  max:72.68,    factor:2.75, gleit:0.5},
+  {min:72.68,  max:Infinity, factor:2.09, gleit:0},
 ];
 let brackets = DEFAULT_BRACKETS.map(b => ({...b}));
 let lastBatchData = [];
@@ -219,7 +222,20 @@ function getBracket(ek) {
 }
 function calcVK(ek) {
   const idx = getBracket(ek);
-  return {vk: ek * brackets[idx].factor, factor: brackets[idx].factor, idx};
+  const b = brackets[idx];
+  let vk;
+  if (b.max === Infinity) {
+    vk = idx > 0 ? b.min * brackets[idx - 1].factor + b.factor * (ek - b.min) : ek * b.factor;
+  } else {
+    const anteil = b.max > b.min ? (b.max - ek) / (b.max - b.min) : 0;
+    vk = ek * (b.factor + b.gleit * anteil);
+  }
+  return {vk, factor: ek > 0 ? vk / ek : b.factor, idx};
+}
+function factorLabel(b, i) {
+  const n = x => x.toLocaleString('de-AT', {maximumFractionDigits: 2});
+  if (b.max === Infinity) return i > 0 ? fmtB(b.min * brackets[i - 1].factor) + ' € + ' + n(b.factor) + ' × Mehrbetrag' : n(b.factor);
+  return b.gleit ? n(b.factor + b.gleit) + ' → ' + n(b.factor) : n(b.factor);
 }
 function renderBrackets(activeIdx=-1) {
   document.getElementById('bracket-body').innerHTML = brackets.map((b, i) => {
@@ -227,7 +243,7 @@ function renderBrackets(activeIdx=-1) {
     const range = b.max === Infinity
       ? (i === 0 ? 'alle Preise' : 'über ' + fmtB(b.min) + ' €')
       : (i === 0 ? 'bis ' + fmtB(b.max) + ' €' : 'über ' + fmtB(b.min) + ' bis ' + fmtB(b.max) + ' €');
-    return `<tr ${hl}><td><span class="arr">▶</span>${range}</td><td class="r">${b.factor.toLocaleString('de-AT',{minimumFractionDigits:2,maximumFractionDigits:2})}</td></tr>`;
+    return `<tr ${hl}><td><span class="arr">▶</span>${range}</td><td class="r">${factorLabel(b, i)}</td></tr>`;
   }).join('');
 }
 function renderConfig() {
@@ -236,6 +252,7 @@ function renderConfig() {
       <td>${fmtB(b.min)}</td>
       <td>${b.max === Infinity ? 'darüber' : fmtB(b.max)}</td>
       <td>${b.factor.toLocaleString('de-AT',{minimumFractionDigits:2,maximumFractionDigits:2})}</td>
+      <td>${b.max === Infinity ? '–' : b.gleit.toLocaleString('de-AT',{minimumFractionDigits:0,maximumFractionDigits:2})}</td>
     </tr>`).join('');
 }
 function setQuelle(text, ok) {
@@ -251,12 +268,12 @@ async function loadStaffel() {
     const data = await res.json();
     const stufen = Array.isArray(data.stufen) ? data.stufen : [];
     if (!res.ok || !stufen.length) throw new Error('keine Staffel');
-    brackets = stufen.map((s, i) => ({min: i === 0 ? 0 : Number(stufen[i-1].bis), max: s.bis == null ? Infinity : Number(s.bis), factor: Number(s.faktor)}));
+    brackets = stufen.map((s, i) => ({min: i === 0 ? 0 : Number(stufen[i-1].bis), max: s.bis == null ? Infinity : Number(s.bis), factor: Number(s.faktor), gleit: s.gleit != null ? Number(s.gleit) : (DEFAULT_BRACKETS[i] ? DEFAULT_BRACKETS[i].gleit : 0)}));
     const stand = data.stand ? new Date(data.stand).toLocaleString('de-AT', {dateStyle: 'short', timeStyle: 'short'}) : '';
     setQuelle('Staffel aus Siggi' + (stand ? ', Stand ' + stand : '') + (data.quelle === 'rueckfall' ? ' (Siggi-Rückfallstand)' : ''), true);
   } catch (e) {
     brackets = DEFAULT_BRACKETS.map(b => ({...b}));
-    setQuelle('Siggi nicht erreichbar – gerechnet mit dem eingebauten Stand vom 16.09.2026', false);
+    setQuelle('Siggi nicht erreichbar – gerechnet mit dem eingebauten Stand vom 17.09.2026', false);
   }
   renderBrackets(); renderConfig();
   const ek = parseNum(document.getElementById('ek-in').value);
@@ -279,7 +296,7 @@ function updateVK(ek) {
   if (isNaN(ek)) { vkOut.textContent = '—'; vkMeta.textContent = ''; renderBrackets(-1); return; }
   const r = calcVK(ek);
   vkOut.textContent = fmt(r.vk);
-  vkMeta.textContent = `EK ${fmt(ek)} € · Faktor ${r.factor.toLocaleString('de-AT',{minimumFractionDigits:2})}`;
+  vkMeta.textContent = `EK ${fmt(ek)} € · Faktor effektiv ${r.factor.toLocaleString('de-AT',{minimumFractionDigits:3,maximumFractionDigits:3})}`;
   renderBrackets(r.idx);
 }
 function doBatch() {
